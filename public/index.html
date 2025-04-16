@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>eHailing Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans p-6">
+
+  <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-6">
+    <h1 class="text-3xl font-bold mb-6 text-center text-blue-600">eHailing Dashboard</h1>
+
+    <!-- Ride Creation Form -->
+    <form id="rideForm" class="mb-8">
+      <h2 class="text-xl font-semibold mb-4">Create a Ride</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <input type="text" id="driverId" placeholder="Driver ID" required class="p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="text" id="pickupLocation" placeholder="Pickup Location" required class="p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="text" id="destination" placeholder="Destination" required class="p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="text" id="status" placeholder="Status" required class="p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      <button type="submit" class="w-full mt-4 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition">Create Ride</button>
+    </form>
+
+    <!-- Ride List -->
+    <h2 class="text-xl font-semibold mb-2">All Rides</h2>
+    <div class="overflow-x-auto mb-8">
+      <table id="ridesTable" class="w-full table-auto border-collapse rounded-lg shadow-lg">
+        <thead class="bg-blue-500 text-white">
+          <tr>
+            <th class="px-4 py-2">Ride ID</th>
+            <th class="px-4 py-2">Driver ID</th>
+            <th class="px-4 py-2">Pickup Location</th>
+            <th class="px-4 py-2">Destination</th>
+            <th class="px-4 py-2">Status</th>
+            <th class="px-4 py-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rideList">
+          <!-- Dynamic content will be inserted here -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- User Creation Form -->
+    <form id="userForm" class="mb-8">
+      <h2 class="text-xl font-semibold mb-4">Create a User</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <input type="text" id="userName" placeholder="User Name" required class="p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="email" id="userEmail" placeholder="Email" required class="p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="text" id="userPhone" placeholder="Phone" required class="p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      <button type="submit" class="w-full mt-4 bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition">Create User</button>
+    </form>
+
+    <!-- User List -->
+    <h2 class="text-xl font-semibold mb-2">All Users</h2>
+    <div class="overflow-x-auto">
+      <table id="usersTable" class="w-full table-auto border-collapse rounded-lg shadow-lg">
+        <thead class="bg-green-500 text-white">
+          <tr>
+            <th class="px-4 py-2">User ID</th>
+            <th class="px-4 py-2">Name</th>
+            <th class="px-4 py-2">Email</th>
+            <th class="px-4 py-2">Phone</th>
+            <th class="px-4 py-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="userList">
+          <!-- Dynamic content will be inserted here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const API_URL_RIDES = "http://localhost:3000/rides";
+    const API_URL_USERS = "http://localhost:3000/users1";
+
+    // For Rides
+    const rideForm = document.getElementById("rideForm");
+    const rideList = document.getElementById("rideList");
+
+    async function fetchRides() {
+      const res = await fetch(API_URL_RIDES);
+      const rides = await res.json();
+      rideList.innerHTML = "";
+      rides.forEach(ride => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td class="px-4 py-2">${ride._id}</td>
+          <td class="px-4 py-2">${ride.driverId || "N/A"}</td>
+          <td class="px-4 py-2">${ride.pickupLocation || "N/A"}</td>
+          <td class="px-4 py-2">${ride.destination || "N/A"}</td>
+          <td class="px-4 py-2">${ride.status || "N/A"}</td>
+          <td class="px-4 py-2">
+            <button class="bg-red-500 text-white py-1 px-3 rounded-md hover:bg-red-600" onclick="deleteRide('${ride._id}')">Delete</button>
+            <button class="bg-yellow-500 text-white py-1 px-3 rounded-md hover:bg-yellow-600" onclick="updateRideStatus('${ride._id}')">Update</button>
+          </td>
+        `;
+        rideList.appendChild(row);
+      });
+    }
+
+    rideForm.addEventListener("submit", async e => {
+      e.preventDefault();
+      const driverId = document.getElementById("driverId").value;
+      const pickupLocation = document.getElementById("pickupLocation").value;
+      const destination = document.getElementById("destination").value;
+      const status = document.getElementById("status").value;
+
+      await fetch(API_URL_RIDES, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ driverId, pickupLocation, destination, status })
+      });
+
+      rideForm.reset();
+      fetchRides();
+    });
+
+    async function deleteRide(id) {
+      await fetch(`${API_URL_RIDES}/${id}`, {
+        method: "DELETE"
+      });
+      fetchRides();
+    }
+
+    async function updateRideStatus(id) {
+      const status = prompt("Enter new status:");
+      if (!status) return;
+      await fetch(`${API_URL_RIDES}/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+      fetchRides();
+    }
+
+    // For Users
+    const userForm = document.getElementById("userForm");
+    const userList = document.getElementById("userList");
+
+    async function fetchUsers() {
+      const res = await fetch(API_URL_USERS);
+      const users = await res.json();
+      userList.innerHTML = "";
+      users.forEach(user => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td class="px-4 py-2">${user._id}</td>
+          <td class="px-4 py-2">${user.name || "N/A"}</td>
+          <td class="px-4 py-2">${user.email || "N/A"}</td>
+          <td class="px-4 py-2">${user.phone || "N/A"}</td>
+          <td class="px-4 py-2">
+            <button class="bg-red-500 text-white py-1 px-3 rounded-md hover:bg-red-600" onclick="deleteUser('${user._id}')">Delete</button>
+            <button class="bg-yellow-500 text-white py-1 px-3 rounded-md hover:bg-yellow-600" onclick="updateUser('${user._id}')">Update</button>
+          </td>
+        `;
+        userList.appendChild(row);
+      });
+    }
+
+    userForm.addEventListener("submit", async e => {
+      e.preventDefault();
+      const name = document.getElementById("userName").value;
+      const email = document.getElementById("userEmail").value;
+      const phone = document.getElementById("userPhone").value;
+
+      await fetch(API_URL_USERS, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, phone })
+      });
+
+      userForm.reset();
+      fetchUsers();
+    });
+
+    async function deleteUser(id) {
+      await fetch(`${API_URL_USERS}/${id}`, {
+        method: "DELETE"
+      });
+      fetchUsers();
+    }
+
+    async function updateUser(id) {
+      const phone = prompt("Enter new phone number:");
+      if (!phone) return;
+      await fetch(`${API_URL_USERS}/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone })
+      });
+      fetchUsers();
+    }
+
+    // Initial fetch
+    fetchRides();
+    fetchUsers();
+  </script>
+
+</body>
+</html>
