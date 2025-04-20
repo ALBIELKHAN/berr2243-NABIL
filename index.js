@@ -19,7 +19,8 @@ async function connectToMongoDB() {
   try {
     await client.connect();
     console.log("Connected to MongoDB!");
-    db = client.db("testDB");
+   db = client.db("E-Hailing");
+
   } catch (err) {
     console.error("Error:", err);
   }
@@ -135,10 +136,134 @@ app.get('/rides', async (req, res) => {
     res.status(400).json({ error: "Invalid user ID" });
     }
    });
-   
-   app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-   });
 
+ // --- CUSTOMER ROUTES ---
+
+app.post('/users/register', async (req, res) => {
+  try {
+    const user = req.body;
+    const result = await db.collection('customers').insertOne(user);
+    res.status(201).json({ id: result.insertedId });
+  } catch (err) {
+    res.status(400).json({ error: "Customer registration failed" });
+  }
+});
+
+app.post('/users/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await db.collection('customers').findOne({ username, password });
+    if (!user) return res.status(401).json({ error: "Invalid user credentials" });
+    res.status(200).json({ message: "Customer login successful", userId: user._id });
+  } catch (err) {
+    res.status(500).json({ error: "Login error" });
+  }
+});
+
+// --- CUSTOMER: View Own Profile ---
+app.get('/users/:id', async (req, res) => {
+  try {
+    const user = await db.collection('customers').findOne({
+      _id: new ObjectId(req.params.id)
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (err) {
+    res.status(400).json({ error: "Invalid customer ID" });
+  }
+});
+
+
+// --- DRIVER ROUTES ---
+
+app.post('/drivers/register', async (req, res) => {
+  try {
+    const driver = req.body;
+    driver.status = "offline";
+    const result = await db.collection('drivers').insertOne(driver);
+    res.status(201).json({ id: result.insertedId });
+  } catch (err) {
+    res.status(400).json({ error: "Driver registration failed" });
+  }
+});
+
+app.post('/drivers/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const driver = await db.collection('drivers').findOne({ username, password });
+    if (!driver) return res.status(401).json({ error: "Invalid driver credentials" });
+    res.status(200).json({ message: "Driver login successful", userId: driver._id });
+  } catch (err) {
+    res.status(500).json({ error: "Login error" });
+  }
+});
+
+app.patch('/drivers/:id/availability', async (req, res) => {
+  try {
+    const result = await db.collection('drivers').updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { status: req.body.status } }
+    );
+    if (result.modifiedCount === 0) return res.status(404).json({ error: "Driver not found" });
+    res.status(200).json({ updated: result.modifiedCount });
+  } catch (err) {
+    res.status(400).json({ error: "Invalid data or driver ID" });
+  }
+});
+
+
+
+// --- ADMIN ROUTE ---
+
+app.delete('/admin/customers/:id', async (req, res) => {
+  try {
+    const result = await db.collection('customers').updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { blocked: true } }
+    );
+    if (result.modifiedCount === 0) return res.status(404).json({ error: "Customer not found" });
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: "Invalid customer ID" });
+  }
+});
+
+app.delete('/admin/drivers/:id', async (req, res) => {
+  try {
+    const result = await db.collection('drivers').updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { blocked: true } }
+    );
+    if (result.modifiedCount === 0) return res.status(404).json({ error: "Driver not found" });
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: "Invalid driver ID" });
+  }
+});
+
+
+// --- ADMIN: View All Customers ---
+app.get('/admin/customers', async (req, res) => {
+  try {
+    const customers = await db.collection('customers').find().toArray();
+    res.status(200).json(customers);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch customers" });
+  }
+});
+
+// --- ADMIN: View All Drivers ---
+app.get('/admin/drivers', async (req, res) => {
+  try {
+    const drivers = await db.collection('drivers').find().toArray();
+    res.status(200).json(drivers);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch drivers" });
+  }
+});
 
   
